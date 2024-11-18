@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <atomic>
+#include <fstream>
 
 class Monitor
 {
@@ -14,7 +15,18 @@ private:
     size_t front, back, count, capacity;
     std::mutex mtx;
     std::condition_variable cv_producer, cv_consumer;
-    std::atomic<bool> producers_done; // Bandera para indicar que los productores han terminado
+    std::atomic<bool> producers_done;
+
+    // Función para registrar eventos en el archivo log
+    void logEvent(const std::string &message)
+    {
+        std::ofstream log_file("registro.log", std::ios::app);
+        if (log_file.is_open())
+        {
+            log_file << message << std::endl;
+            log_file.close();
+        }
+    }
 
     void resizeQueue(size_t new_capacity)
     {
@@ -27,19 +39,21 @@ private:
         front = 0;
         back = count;
         capacity = new_capacity;
-        std::cout << "Cola redimensionada a: " << new_capacity << std::endl;
+        logEvent("INFO: Cola redimensionada a: " + std::to_string(new_capacity));
     }
 
 public:
     Monitor(size_t initial_capacity) : front(0), back(0), count(0), capacity(initial_capacity), producers_done(false)
     {
         queue.resize(initial_capacity);
+        logEvent("INFO: Simulador iniciado con capacidad de cola: " + std::to_string(initial_capacity));
     }
 
     void setProducersDone()
     {
         producers_done = true;
-        cv_consumer.notify_all(); // Notificar a todos los consumidores en espera
+        cv_consumer.notify_all();
+        logEvent("INFO: Todos los productores han terminado.");
     }
 
     bool isQueueEmpty()
@@ -48,7 +62,7 @@ public:
         return count == 0;
     }
 
-    void produce(int item)
+    void produce(int item, int producer_id)
     {
         std::unique_lock<std::mutex> lock(mtx);
         cv_producer.wait(lock, [this]()
@@ -57,6 +71,7 @@ public:
         queue[back] = item;
         back = (back + 1) % capacity;
         ++count;
+        logEvent("PRODUCTOR " + std::to_string(producer_id) + ": Agregó item " + std::to_string(item));
 
         if (count == capacity)
         {
@@ -66,21 +81,22 @@ public:
         cv_consumer.notify_one();
     }
 
-    int consume()
+    int consume(int consumer_id)
     {
         std::unique_lock<std::mutex> lock(mtx);
-        // Esperar si la cola está vacía y los productores no han terminado
         cv_consumer.wait(lock, [this]()
                          { return count > 0 || producers_done; });
 
         if (count == 0 && producers_done)
         {
+            logEvent("CONSUMIDOR " + std::to_string(consumer_id) + ": No hay más elementos por consumir.");
             return -1; // Indicador de que no hay más elementos por consumir
         }
 
         int item = queue[front];
         front = (front + 1) % capacity;
         --count;
+        logEvent("CONSUMIDOR " + std::to_string(consumer_id) + ": Consumio item " + std::to_string(item));
 
         if (count > 0 && count <= capacity / 4)
         {
@@ -95,38 +111,34 @@ public:
 std::atomic<bool> producers_done(false);
 
 // Función de los productores
-void producerTask(Monitor &monitor, int num_items, int id)
+void producerTask(Monitor &monitor, int num_items, int producer_id)
 {
     for (int i = 0; i < num_items; ++i)
     {
-        monitor.produce(i + id * 1000);                              // Item único basado en el ID del productor
+        monitor.produce(i + producer_id * 1000, producer_id);
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulación de tiempo de producción
     }
-    std::cout << "Productor " << id << " ha terminado de producir." << std::endl;
 }
 
 // Función de los consumidores
-void consumerTask(Monitor &monitor, int wait_time, int id)
+void consumerTask(Monitor &monitor, int wait_time, int consumer_id)
 {
     auto start_time = std::chrono::steady_clock::now();
     while (true)
     {
-        if (producers_done && monitor.isQueueEmpty())
+        int item = monitor.consume(consumer_id);
+        if (item == -1)
         {
-            break; // Salir si todos los productores han terminado y la cola está vacía
+            break; // Salir si no hay más elementos por consumir
         }
-
-        int item = monitor.consume();
-        std::cout << "Consumidor " << id << " consumió: " << item << std::endl;
 
         // Verificar si se ha alcanzado el tiempo máximo de espera
         auto current_time = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count() > wait_time)
         {
-            break; // Salir si ha pasado el tiempo de espera
+            break;
         }
     }
-    std::cout << "Consumidor " << id << " ha terminado de consumir." << std::endl;
 }
 
 int main(int argc, char *argv[])
