@@ -22,7 +22,7 @@ $ ./mvirtual -m <numero_de_marcos> -a <algoritmo> -f <archivo_de_referencias>
 ```
 ### Ejemplo
 ```bash
-$ ./mvirtual -m 10 -a 1 -f referencias.txt
+$ ./mvirtual -m 10 -a FIFO -f referencias.txt
 ```
 ### Importante
 - El archivo de referencias debe tener formato "0 3 1 2" donde cada número representa una referencia a una página y llamarse referencias.txt
