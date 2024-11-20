@@ -16,3 +16,18 @@ $ ./monitor -p 10 -c 5 -s 50 -t 1
 El programa se desarrollo en un sistema WSL (Windows Subsystem for Linux) por lo que se recomienda ejecutarlo en un sistema similar para evitar problemas de compatibilidad.
 
 ## Parte 2: Creacion de simulador de memoria virtual
+Para hacer uso del simulador de memoria virtual se debe ejecutar el programa con los siguientes comandos:
+```bash
+$ ./mvirtual -m <numero_de_marcos> -a <algoritmo> -f <archivo_de_referencias>
+```
+### Ejemplo
+```bash
+$ ./mvirtual -m 10 -a 1 -f referencias.txt
+```
+### Importante
+- El archivo de referencias debe tener formato "0 3 1 2" donde cada número representa una referencia a una página y llamarse referencias.txt
+- Los algoritmos disponibles son:
+    - FIFO
+    - LRU
+    - CLOCK
+    - OPTIMO
