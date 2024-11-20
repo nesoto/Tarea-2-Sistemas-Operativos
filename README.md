@@ -2,7 +2,7 @@
 ## Integrantes
 - [Nicolás Soto](https://github.com/nesoto)
 - [Alejandro Neira](https://github.com/Aneira22)
-- [Erick Saldívar]()
+- [Erick Saldívar](https://github.com/easaldivar)
 ## Parte 1: Creacion de un Monitor para manejo de colas
 Para hacer uso del monitor se debe ejecutar el programa con los siguientes comandos:
 ```bash
